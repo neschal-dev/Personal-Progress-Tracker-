@@ -3,6 +3,7 @@
  */
 import express, { type Express } from "express";
 import cookieParser from "cookie-parser";
+import session from "express-session";
 import cors from "cors";
 import helmet from "helmet";
 
@@ -31,14 +32,23 @@ const PORT = common.PORT;
 /**
  *Middlewares
  */
+
 app.use(
-  cors({
-    origin: common.CLIENT_URL,
-    credentials: true,
-  }),
+  cors({ origin: common.CLIENT_URL, credentials: true }),
   express.json(),
   helmet(),
   cookieParser(),
+  session({
+    secret: common.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: common.IS_PRODUCTION, // true in prod (requires HTTPS), false for local http://localhost
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 1000 * 60 * 10, // 10 min — state only needs to live briefly during the OAuth handshake
+    },
+  }),
 );
 
 // Immediately Inovoke async Function to Initialize application

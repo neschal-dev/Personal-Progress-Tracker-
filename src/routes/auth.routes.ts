@@ -2,13 +2,18 @@
  * Node module
  */
 
-import { Router } from "express";
 /**
  * Routers
  */
-import { googleAuth } from "../controller/auth.controller.js";
+import { Router } from "express";
+
+/**
+ * Controllers
+ */
+import { googleAuth, googleCallback } from "../controller/auth.controller.js";
 
 const router: Router = Router();
 
 router.get("/google", googleAuth);
+router.get("/google/callback", googleCallback);
 export default router;
