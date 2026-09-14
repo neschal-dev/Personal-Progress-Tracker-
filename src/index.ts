@@ -23,6 +23,8 @@ import router from "./routes/index.js";
  *Config
  */
 import { common } from "./configs/index.js";
+import { connectDB, disconnectDB } from "./db/index.js";
+import { Server } from "http";
 /**
  *Initial Express
  */
@@ -55,7 +57,7 @@ app.use(
 (async function (): Promise<void> {
   try {
     // Establish a postgres db connection
-
+    await connectDB();
     // Register application routes under the  root path
     app.use("/api/v1", router);
 
@@ -84,8 +86,10 @@ app.use(
 
 const serverTermination = async (signal: NodeJS.Signals): Promise<void> => {
   try {
-    // Disconnect from postgres database
+    console.info(`Server Shutdown`, signal);
 
+    // Disconnect from postgres database
+    await disconnectDB();
     // Log a warning indicating  the server is shutting down
     console.info(`Server Shutdown`, signal);
 
