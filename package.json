@@ -29,6 +29,7 @@
     "express-session": "^1.19.0",
     "googleapis": "^180.0.0",
     "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
     "pg": "^8.23.0"
   },
   "devDependencies": {
@@ -36,6 +37,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/express-session": "^1.19.0",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.20.2",
     "@types/pg": "^8.23.1",
     "tsc-alias": "^1.9.5",

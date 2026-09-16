@@ -8,12 +8,15 @@ import crypto from "node:crypto";
  * Types
  */
 import type { Request, Response } from "express";
+import { User } from "../types/user.types.js";
 
 /**
  * Custom Modules
  */
 import { oauth2Client } from "../lib/oauth2Client.js";
 import { googleOauthConfig } from "../configs/index.js";
+import { findOrCreateUser } from "../db/repository/user.repository.js";
+import { createTokens } from "../lib/tokens.js";
 
 export async function googleAuth(req: Request, res: Response) {
   const state = crypto.randomBytes(32).toString("hex");
@@ -48,7 +51,7 @@ export async function googleCallback(req: Request, res: Response) {
     });
   }
 
-  // State has been verified — clear it so it can't be reused
+  // // State has been verified — clear it so it can't be reused
   // delete req.session.state;
 
   // Handle case when code is missing entirely
@@ -84,6 +87,7 @@ export async function googleCallback(req: Request, res: Response) {
 
   // Handle case where necessary info isn't found for creating an account
   if (
+    !userInfo.resourceName ||
     !userInfo.names?.[0]?.givenName ||
     !userInfo.names?.[0]?.familyName ||
     !userInfo.photos?.[0]?.url ||
@@ -101,16 +105,38 @@ export async function googleCallback(req: Request, res: Response) {
     });
   }
 
-  // TODO: find-or-create the user in your DB using userInfo.emailAddresses[0].value,
-  // then issue your own session/JWT and redirect to the frontend instead of
-  // returning raw profile data.
+  // Find-or-create the user in the DB using their stable Google ID
+  let user: User;
+  try {
+    user = await findOrCreateUser({
+      google_id: userInfo.resourceName.replace("people/", ""),
+      email: userInfo.emailAddresses[0].value,
+      first_name: userInfo.names[0].givenName,
+      last_name: userInfo.names[0].familyName,
+      avatar_url: userInfo.photos[0].url,
+    });
+  } catch (err) {
+    console.error("Error finding or creating user.", err);
+
+    return res.status(500).json({
+      code: "ServerError",
+      message: "Failed to create or retrieve user",
+    });
+  }
+
+  // Guard against issuing tokens without resolved id
+  if (!user) {
+    console.error("Unable to resolve user id for token creation.");
+    return res.sendStatus(500);
+  }
+  // TODO: issue your own session/JWT using `user`, then redirect to frontend
+  // instead of returning raw profile data.
+  const { accessToken, refreshToken } = await createTokens({
+    sub: user.id,
+    googleId: user.google_id,
+  });
   return res.status(200).json({
     message: "Authenticated",
-    user: {
-      firstName: userInfo.names[0].givenName,
-      lastName: userInfo.names[0].familyName,
-      email: userInfo.emailAddresses[0].value,
-      photo: userInfo.photos[0].url,
-    },
+    user,
   });
 }
