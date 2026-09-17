@@ -1,3 +1,9 @@
+import LoginForm from "../components/auth/LoginForm";
+
 export default function Home() {
-  return <h1>Hello muji</h1>;
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-white px-4">
+      <LoginForm />
+    </div>
+  );
 }
