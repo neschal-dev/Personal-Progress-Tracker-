@@ -6,7 +6,7 @@ import type { Request, Response } from "express";
 /**
  * Repository
  */
-import { findUserByGoogleId } from "../db/repository/user.repository.js";
+import { findUserById } from "../db/repository/user.repository.js";
 import { verifyAccessToken } from "../lib/tokens.js";
 
 export async function getMe(req: Request, res: Response) {
@@ -32,16 +32,16 @@ export async function getMe(req: Request, res: Response) {
     });
   }
 
-  let googleId: string;
+  let userId: string;
 
-  // Verify the access token and pull the Google ID out of its payload
-  // (the token is signed with { sub: user.id, googleId: user.google_id })
+  // Verify the access token and pull the user's internal id out of its
+  // payload (the token is signed with { sub: user.id, googleId: user.google_id })
   try {
     const decoded = verifyAccessToken(accessToken) as {
       sub: string;
       googleId: string;
     };
-    googleId = decoded.googleId; // assign to the OUTER googleId, don't redeclare it
+    userId = decoded.sub; // assign to the OUTER userId, don't redeclare it
   } catch (err) {
     return res.status(401).json({
       code: "AccessTokenError",
@@ -49,9 +49,9 @@ export async function getMe(req: Request, res: Response) {
     });
   }
 
-  // Look up the user in the DB using the verified Google ID
+  // Look up the user in the DB using their internal id
   try {
-    const me = await findUserByGoogleId(googleId);
+    const me = await findUserById(userId);
     return res.json(me);
   } catch (err) {
     console.error("Error getting current user", err);
