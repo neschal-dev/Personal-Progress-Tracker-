@@ -32,11 +32,16 @@ export async function getMe(req: Request, res: Response) {
     });
   }
 
-  let userId: string;
+  let googleId: string;
 
+  // Verify the access token and pull the Google ID out of its payload
+  // (the token is signed with { sub: user.id, googleId: user.google_id })
   try {
-    const decoded = verifyAccessToken(accessToken) as { userId: string };
-    userId = decoded.userId; // assign to the OUTER userId, don't redeclare it
+    const decoded = verifyAccessToken(accessToken) as {
+      sub: string;
+      googleId: string;
+    };
+    googleId = decoded.googleId; // assign to the OUTER googleId, don't redeclare it
   } catch (err) {
     return res.status(401).json({
       code: "AccessTokenError",
@@ -44,11 +49,15 @@ export async function getMe(req: Request, res: Response) {
     });
   }
 
+  // Look up the user in the DB using the verified Google ID
   try {
-    const me = await findUserByGoogleId(userId);
-    res.json(me);
+    const me = await findUserByGoogleId(googleId);
+    return res.json(me);
   } catch (err) {
     console.error("Error getting current user", err);
-    res.status(500);
+    return res.status(500).json({
+      code: "ServerError",
+      message: "Failed to retrieve user",
+    });
   }
 }

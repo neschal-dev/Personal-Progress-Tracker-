@@ -3,6 +3,7 @@
  */
 import { Express, Router } from "express";
 import authRoutes from "./auth.routes.js";
+import meRoutes from "./me.route.js";
 
 const router: Router = Router();
 
@@ -11,4 +12,5 @@ const router: Router = Router();
  */
 
 router.use("/auth", authRoutes);
+router.use("/", meRoutes);
 export default router;

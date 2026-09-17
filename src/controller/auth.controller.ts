@@ -51,8 +51,8 @@ export async function googleCallback(req: Request, res: Response) {
     });
   }
 
-  // // State has been verified — clear it so it can't be reused
-  // delete req.session.state;
+  // State has been verified — clear it so it can't be reused
+  delete req.session.state;
 
   // Handle case when code is missing entirely
   if (!query.code || typeof query.code !== "string") {
@@ -129,14 +129,16 @@ export async function googleCallback(req: Request, res: Response) {
     console.error("Unable to resolve user id for token creation.");
     return res.sendStatus(500);
   }
-  // TODO: issue your own session/JWT using `user`, then redirect to frontend
-  // instead of returning raw profile data.
-  const { accessToken, refreshToken } = await createTokens({
+
+  // Issue our own access/refresh tokens for this user, then redirect to
+  // the frontend — the client fetches the profile via /me afterwards.
+  const { accessToken, refreshToken } = createTokens({
     sub: user.id,
     googleId: user.google_id,
   });
 
   res.cookie("accessToken", accessToken, {
+    httpOnly: true,
     secure: common.IS_PRODUCTION,
     sameSite: "lax",
     maxAge: Number(common.ACCESS_TOKEN_MAX_AGE),
@@ -149,9 +151,5 @@ export async function googleCallback(req: Request, res: Response) {
     maxAge: Number(common.REFRESH_TOKEN_MAX_AGE),
   });
 
-  res.redirect(`${common.CLIENT_URL}/app`);
-  return res.status(200).json({
-    message: "Authenticated",
-    user,
-  });
+  return res.redirect(`${common.CLIENT_URL}/app`);
 }
