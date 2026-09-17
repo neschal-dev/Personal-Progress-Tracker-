@@ -24,7 +24,7 @@ import router from "./routes/index.js";
  */
 import { common } from "./configs/index.js";
 import { connectDB, disconnectDB } from "./db/index.js";
-import { Server } from "http";
+
 /**
  *Initial Express
  */

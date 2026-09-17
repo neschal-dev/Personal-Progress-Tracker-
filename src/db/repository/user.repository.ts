@@ -37,3 +37,14 @@ export async function findOrCreateUser(input: CreateUserInput): Promise<User> {
 
   return inserted.rows[0];
 }
+
+export async function findUserByGoogleId(
+  google_id: string,
+): Promise<User | null> {
+  const existing = await pool.query<User>(
+    "SELECT * FROM users WHERE google_id = $1",
+    [google_id],
+  );
+
+  return existing.rows[0] ?? null;
+}

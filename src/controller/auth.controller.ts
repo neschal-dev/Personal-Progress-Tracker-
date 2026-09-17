@@ -14,7 +14,7 @@ import { User } from "../types/user.types.js";
  * Custom Modules
  */
 import { oauth2Client } from "../lib/oauth2Client.js";
-import { googleOauthConfig } from "../configs/index.js";
+import { common, googleOauthConfig } from "../configs/index.js";
 import { findOrCreateUser } from "../db/repository/user.repository.js";
 import { createTokens } from "../lib/tokens.js";
 
@@ -135,6 +135,21 @@ export async function googleCallback(req: Request, res: Response) {
     sub: user.id,
     googleId: user.google_id,
   });
+
+  res.cookie("accessToken", accessToken, {
+    secure: common.IS_PRODUCTION,
+    sameSite: "lax",
+    maxAge: Number(common.ACCESS_TOKEN_MAX_AGE),
+  });
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: common.IS_PRODUCTION,
+    sameSite: "lax",
+    maxAge: Number(common.REFRESH_TOKEN_MAX_AGE),
+  });
+
+  res.redirect(`${common.CLIENT_URL}/app`);
   return res.status(200).json({
     message: "Authenticated",
     user,

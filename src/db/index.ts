@@ -7,7 +7,7 @@ import type { QueryResult, QueryResultRow } from "pg";
 /**
  * Config
  */
-import {  db } from "../configs/index.js";
+import { db } from "../configs/index.js";
 
 export const pool = new Pool({
   connectionString: db.DATABASE_URL,
@@ -34,7 +34,8 @@ export async function connectDB(): Promise<void> {
   const client = await pool.connect();
   try {
     await client.query("SELECT 1");
-    console.log("Connected to Postgres");
+
+    console.log("Connected to Postgres ✅");
   } finally {
     client.release();
   }
