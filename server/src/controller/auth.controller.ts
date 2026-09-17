@@ -16,7 +16,19 @@ import { User } from "../types/user.types.js";
 import { oauth2Client } from "../lib/oauth2Client.js";
 import { common, googleOauthConfig } from "../configs/index.js";
 import { findOrCreateUser } from "../db/repository/user.repository.js";
-import { createTokens } from "../lib/tokens.js";
+import { createTokens, verifyRefreshToken } from "../lib/tokens.js";
+
+/**
+ * Shared cookie options for access/refresh tokens, so the flags we set at
+ * login and the flags we clear at logout can never drift out of sync.
+ */
+const accessTokenCookieOptions = {
+  httpOnly: true,
+  secure: common.IS_PRODUCTION,
+  sameSite: "lax" as const,
+};
+
+const refreshTokenCookieOptions = accessTokenCookieOptions;
 
 export async function googleAuth(req: Request, res: Response) {
   const state = crypto.randomBytes(32).toString("hex");
@@ -138,18 +150,67 @@ export async function googleCallback(req: Request, res: Response) {
   });
 
   res.cookie("accessToken", accessToken, {
-    httpOnly: true,
-    secure: common.IS_PRODUCTION,
-    sameSite: "lax",
-    maxAge: Number(common.ACCESS_TOKEN_MAX_AGE),
+    ...accessTokenCookieOptions,
+    maxAge: Number(common.ACCESS_TOKEN_MAX_AGE) * 1000,
   });
 
   res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: common.IS_PRODUCTION,
-    sameSite: "lax",
-    maxAge: Number(common.REFRESH_TOKEN_MAX_AGE),
+    ...refreshTokenCookieOptions,
+    maxAge: Number(common.REFRESH_TOKEN_MAX_AGE) * 1000,
   });
 
   return res.redirect(`${common.CLIENT_URL}/app`);
+}
+
+export async function refresh(req: Request, res: Response) {
+  const refreshToken = req.cookies?.refreshToken;
+
+  // Handle case when client doesn't send a refresh token cookie
+  if (!refreshToken) {
+    return res.status(401).json({
+      code: "RefreshTokenError",
+      message: "Refresh token is required",
+    });
+  }
+
+  // Verify the refresh token and re-issue both tokens. Rotating the
+  // refresh token too (rather than reusing it) limits how long a stolen
+  // refresh token stays valid if it's ever leaked.
+  try {
+    const decoded = verifyRefreshToken(refreshToken) as {
+      sub: string;
+      googleId: string;
+    };
+
+    const tokens = createTokens({
+      sub: decoded.sub,
+      googleId: decoded.googleId,
+    });
+
+    res.cookie("accessToken", tokens.accessToken, {
+      ...accessTokenCookieOptions,
+      maxAge: Number(common.ACCESS_TOKEN_MAX_AGE) * 1000,
+    });
+
+    res.cookie("refreshToken", tokens.refreshToken, {
+      ...refreshTokenCookieOptions,
+      maxAge: Number(common.REFRESH_TOKEN_MAX_AGE) * 1000,
+    });
+
+    return res.status(204).send();
+  } catch (err) {
+    return res.status(401).json({
+      code: "RefreshTokenError",
+      message: "Refresh token is invalid or expired",
+    });
+  }
+}
+
+export async function logout(req: Request, res: Response) {
+  // Clearing options must match the cookie's original path/domain/sameSite
+  // or the browser won't recognize it as the same cookie to remove
+  res.clearCookie("accessToken", accessTokenCookieOptions);
+  res.clearCookie("refreshToken", refreshTokenCookieOptions);
+
+  return res.status(204).send();
 }
