@@ -4,16 +4,14 @@ import type { NextRequest } from "next/server";
 /**
  * Fast-path route guard. This only checks whether an accessToken cookie is
  * present — it does NOT verify the JWT signature (that requires the
- * server's secret, which must never reach the Next.js edge/middleware
- * runtime). This means an expired-but-present cookie still passes here;
- * the actual authorization check happens on the backend when the page's
- * Server Component calls getCurrentUser(). This middleware exists purely
- * to redirect obviously-logged-out users before rendering, not as the
- * source of truth for auth.
+ * server's secret). The actual authorization check happens on the backend
+ * when the page's Server Component calls getCurrentUser(). This proxy
+ * exists purely to redirect obviously-logged-out users before rendering,
+ * not as the source of truth for auth.
  */
-const PROTECTED_PATHS = ["/app"];
+const PROTECTED_PATHS = ["/dashboard"];
 
-export default function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isProtected = PROTECTED_PATHS.some(
@@ -35,6 +33,6 @@ export default function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-export  const config = {
-  matcher: ["/app/:path*"],
+export const config = {
+  matcher: ["/dashboard/:path*"],
 };

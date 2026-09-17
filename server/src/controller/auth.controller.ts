@@ -159,7 +159,7 @@ export async function googleCallback(req: Request, res: Response) {
     maxAge: Number(common.REFRESH_TOKEN_MAX_AGE) * 1000,
   });
 
-  return res.redirect(`${common.CLIENT_URL}/app`);
+  return res.redirect(`${common.CLIENT_URL}/dashboard`);
 }
 
 export async function refresh(req: Request, res: Response) {
